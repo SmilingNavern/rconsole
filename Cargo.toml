@@ -1,0 +1,4 @@
+[package]
+name = "rconsole"
+version = "0.1.0"
+authors = ["Alexander Danilov <livingdeadzerg@yandex.ru>"]
