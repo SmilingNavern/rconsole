@@ -12,6 +12,20 @@ fn read_password() -> Result<String,Error> {
     Ok(s)
 }
 
+fn readchar(stream: TcpStream) {
+    let mut buffer: [u8] = [0; 1];
+    let _ = stream.read(&mut buffer);
+}
+
+fn do_sysreq(stream: TcpStream, key: char, sysreq_fh: File) -> Option<int> {
+    if !key.is_alphabetic() {
+        let _ = stream.write(b"Key out of range\n");
+        return None; 
+    } 
+
+    let _ = stream.write(b"Send {} to sysreq? (y/n)\n", key);
+}
+
 fn handle_client(mut stream: TcpStream, password: &String) {
     let mut rstream = BufReader::new(stream.try_clone().unwrap());
     let _ = stream.write(b"Password: ");
