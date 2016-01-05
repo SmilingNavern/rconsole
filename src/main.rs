@@ -12,7 +12,7 @@ fn read_password() -> Result<String,Error> {
     Ok(s)
 }
 
-fn handle_client(mut stream: TcpStream, password: String) {
+fn handle_client(mut stream: TcpStream, password: &String) {
     let mut rstream = BufReader::new(stream.try_clone().unwrap());
     let _ = stream.write(b"Password: ");
     let mut buffer = String::new();
@@ -39,7 +39,7 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                handle_client(stream, password);
+                handle_client(stream, &password);
             }
             Err(e) => { 
                 print!("Connection failed: {}", e);
