@@ -4,11 +4,12 @@ use std::io::{Read, Write, Error, BufRead, BufReader};
 use std::net::{TcpListener, TcpStream};
 
 
-fn read_password(s: &mut String) -> Result<(),Error> {
+fn read_password() -> Result<(String),Error> {
     let mut f = try!(File::open("/etc/rconsole.pw"));
+    let mut s = String::with_capacity(128);
 
-    try!(f.read_to_string(s));
-    Ok(())
+    try!(f.read_to_string(&mut s));
+    Ok((s))
 }
 
 fn handle_client(mut stream: TcpStream, password: String) {
@@ -16,15 +17,10 @@ fn handle_client(mut stream: TcpStream, password: String) {
     let _ = stream.write(b"Password: ");
     let mut buffer = String::new();
     let _ = rstream.read_line(&mut buffer).unwrap();
-    let bla = password.clone();
-//    let bla = match String::from_utf8(buffer) {
-//        Ok(v) => v,
-//        Err(e) => panic!("Invalid UTF-8: {}", e),
-//    };
-    let s1 = bla.trim();
+    let s1 = password.trim();
     let s2 = buffer.trim();
+
     print!("{} and {}", s1, s2);
-    print!("LEN {} and {}\n", s1.len(), s2.len());
 
     if s1 == s2 {
         let _ = stream.write(b"Hello, world\n");
@@ -37,9 +33,8 @@ fn handle_client(mut stream: TcpStream, password: String) {
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
-    let mut password = String::new();
 
-    let _ = read_password(&mut password);
+    let password = read_password().unwrap();
 
     for stream in listener.incoming() {
         match stream {
