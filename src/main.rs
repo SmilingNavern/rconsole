@@ -4,12 +4,12 @@ use std::io::{Read, Write, Error, BufRead, BufReader};
 use std::net::{TcpListener, TcpStream};
 
 
-fn read_password() -> Result<(String),Error> {
+fn read_password() -> Result<String,Error> {
     let mut f = try!(File::open("/etc/rconsole.pw"));
     let mut s = String::with_capacity(128);
 
     try!(f.read_to_string(&mut s));
-    Ok((s))
+    Ok(s)
 }
 
 fn handle_client(mut stream: TcpStream, password: String) {
@@ -39,7 +39,7 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                handle_client(stream, password.clone());
+                handle_client(stream, password);
             }
             Err(e) => { 
                 print!("Connection failed: {}", e);
