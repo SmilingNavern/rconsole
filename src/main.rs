@@ -3,6 +3,9 @@ use std::string::String;
 use std::io::{Read, Write, Error};
 use std::net::{TcpListener, TcpStream};
 
+fn utf8_to_string(vector: Vec<u8>) -> String {
+  String::from_utf8(vector).unwrap()
+}
 
 fn read_password(s: &mut String) -> Result<(),Error> {
     let mut f = try!(File::open("/etc/rconsole.pw"));
@@ -14,18 +17,24 @@ fn read_password(s: &mut String) -> Result<(),Error> {
 fn handle_client(mut stream: TcpStream, password: String) {
     let _ = stream.write(b"Password: ");
     let mut buffer : Vec<u8> = vec![0; 128];
-    let len = stream.read(&mut buffer[..]).unwrap();
-    let bla = match String::from_utf8(buffer) {
-        Ok(v) => v,
-        Err(e) => panic!("Invalid UTF-8: {}", e),
-    };
+    let _ = stream.read(&mut buffer[..]).unwrap();
+    let bla = password.clone().into_bytes();
+//    let bla = match String::from_utf8(buffer) {
+//        Ok(v) => v,
+//        Err(e) => panic!("Invalid UTF-8: {}", e),
+//    };
+    let s1 = utf8_to_string(bla);
+    let s2 = utf8_to_string(buffer);
+    let s3= s1.trim();
+    let s4= s2.trim();
+    print!("{} and {}", s3, s4);
 
-    print!("{}", bla);
-
-    if bla == password {
+    if s3 == s4 {
         let _ = stream.write(b"Hello, world\n");
+    } else {
+        let _ = stream.write(b"Wrong pass\n");
     }
-    print!("Test");
+    let _ = stream.write(b"TEST\n");
     
 }
 
