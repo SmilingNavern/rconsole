@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::string::String;
 use std::io::{Read, Write, Error, BufRead, BufReader};
 use std::net::{TcpListener, TcpStream};
@@ -19,18 +20,22 @@ fn readchar(stream: &TcpStream) -> String {
     buffer.trim().to_string()
 }
 
-fn do_sysreq(stream: &mut TcpStream, key: char, sysreq_fh: File) -> Result<(), Error> {
-    if !key.is_alphabetic() {
+fn do_sysreq(stream: &mut TcpStream, key: &String, sysreq_fh: &mut File) -> Result<(), Error> {
+    if !key.chars().all(char::is_alphabetic) {
         let _ = stream.write(b"Key out of range\n");
         return Ok(()); 
     } 
 
     let _ = stream.write(format!("Send {} to sysreq? (y/n)\n", key).as_bytes());
+    let answer = readchar(&stream);
+    if answer.to_lowercase() == "y".to_string() {
+        sysreq_fh.write(key.as_bytes());
+    }
 
     Ok(())
 }
 
-fn handle_client(mut stream: TcpStream, password: &String) {
+fn handle_client(mut stream: TcpStream, password: &String, sysreq_fh: &mut File) {
     let mut rstream = BufReader::new(stream.try_clone().unwrap());
     let _ = stream.write(b"Password: ");
     let mut buffer = String::new();
@@ -38,19 +43,19 @@ fn handle_client(mut stream: TcpStream, password: &String) {
     let s1 = password.trim();
     let s2 = buffer.trim();
 
-    print!("{} and {}\n", s1, s2);
 
-    let _ = stream.write(b"PUT A CHAR: ");
-    let c = readchar(&stream);
-
-    let _ = stream.write(format!("{}",c).as_bytes());
-
+    //let _ = stream.write(format!("{}",c).as_bytes());
     if s1 == s2 {
         let _ = stream.write(b"Hello, world\n");
+        let _ = stream.write(b"PUT A CHAR: ");       
+        let c = readchar(&stream);
+        if c.chars().all(char::is_uppercase) {
+            do_sysreq(&mut stream, &c, &mut sysreq_fh);
+        }
+
     } else {
         let _ = stream.write(b"Wrong pass\n");
     }
-    let _ = stream.write(b"TEST\n");
     
 }
 
@@ -58,11 +63,15 @@ fn main() {
     let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
 
     let password = read_password().unwrap();
+    let mut sysreq_fh = OpenOptions::new()
+                            .write(true)
+                            .open("/proc/sysrq-trigger")
+                            .unwrap();
 
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                handle_client(stream, &password);
+                handle_client(stream, &password, &mut sysreq_fh);
             }
             Err(e) => { 
                 print!("Connection failed: {}", e);
