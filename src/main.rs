@@ -13,7 +13,7 @@ fn read_password() -> Result<String,Error> {
     Ok(s)
 }
 
-fn readchar(stream: &TcpStream) -> String {
+fn read_char(stream: &TcpStream) -> String {
     let mut rstream = BufReader::new(stream.try_clone().unwrap());
     let mut buffer = String::with_capacity(2);
     let _ = rstream.read_line(&mut buffer).unwrap();
@@ -27,7 +27,7 @@ fn do_sysreq(stream: &mut TcpStream, key: String, sysreq_fh: &mut File) -> Resul
     } 
 
     let _ = stream.write(format!("Send {} to sysreq? (y/n)\n", key).as_bytes());
-    let answer = readchar(&stream);
+    let answer = read_char(&stream);
     if answer.to_lowercase() == "y".to_string() {
         sysreq_fh.write(key.as_bytes());
     }
@@ -48,7 +48,7 @@ fn handle_client(mut stream: TcpStream, password: &String, sysreq_fh: &mut File)
     if s1 == s2 {
         let _ = stream.write(b"Hello, world\n");
         let _ = stream.write(b"PUT A CHAR: ");       
-        let c = readchar(&stream);
+        let c = read_char(&stream);
         if c.chars().all(char::is_uppercase) {
             do_sysreq(&mut stream, c.to_lowercase(), sysreq_fh);
         }
