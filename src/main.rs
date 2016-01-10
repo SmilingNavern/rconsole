@@ -20,7 +20,7 @@ fn readchar(stream: &TcpStream) -> String {
     buffer.trim().to_string()
 }
 
-fn do_sysreq(stream: &mut TcpStream, key: &String, sysreq_fh: &mut File) -> Result<(), Error> {
+fn do_sysreq(stream: &mut TcpStream, key: String, sysreq_fh: &mut File) -> Result<(), Error> {
     if !key.chars().all(char::is_alphabetic) {
         let _ = stream.write(b"Key out of range\n");
         return Ok(()); 
@@ -50,7 +50,7 @@ fn handle_client(mut stream: TcpStream, password: &String, sysreq_fh: &mut File)
         let _ = stream.write(b"PUT A CHAR: ");       
         let c = readchar(&stream);
         if c.chars().all(char::is_uppercase) {
-            do_sysreq(&mut stream, &c, &mut sysreq_fh);
+            do_sysreq(&mut stream, c.to_lowercase(), sysreq_fh);
         }
 
     } else {
