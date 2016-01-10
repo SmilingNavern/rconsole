@@ -13,11 +13,11 @@ fn read_password() -> Result<String,Error> {
     Ok(s)
 }
 
-fn read_char(stream: &TcpStream) -> String {
-    let mut rstream = BufReader::new(stream.try_clone().unwrap());
+fn read_char(stream: &TcpStream) -> Result<String,Error> {
+    let mut rstream = BufReader::new(try!(stream.try_clone()));
     let mut buffer = String::with_capacity(2);
-    let _ = rstream.read_line(&mut buffer).unwrap();
-    buffer.trim().to_string()
+    let _ = try!(rstream.read_line(&mut buffer));
+    Ok(buffer.trim().to_string())
 }
 
 fn do_sysreq(stream: &mut TcpStream, key: String, sysreq_fh: &mut File) -> Result<(), Error> {
@@ -27,7 +27,7 @@ fn do_sysreq(stream: &mut TcpStream, key: String, sysreq_fh: &mut File) -> Resul
     } 
 
     let _ = stream.write(format!("Send {} to sysreq? (y/n)\n", key).as_bytes());
-    let answer = read_char(&stream);
+    let answer = try!(read_char(&stream));
     if answer.to_lowercase() == "y".to_string() {
         sysreq_fh.write(key.as_bytes());
     }
@@ -35,11 +35,11 @@ fn do_sysreq(stream: &mut TcpStream, key: String, sysreq_fh: &mut File) -> Resul
     Ok(())
 }
 
-fn handle_client(mut stream: TcpStream, password: &String, sysreq_fh: &mut File) {
-    let mut rstream = BufReader::new(stream.try_clone().unwrap());
+fn handle_client(mut stream: TcpStream, password: &String, sysreq_fh: &mut File) -> Result<(),Error> {
+    let mut rstream = BufReader::new(try!(stream.try_clone()));
     let _ = stream.write(b"Password: ");
     let mut buffer = String::new();
-    let _ = rstream.read_line(&mut buffer).unwrap();
+    let _ = try!(rstream.read_line(&mut buffer));
     let s1 = password.trim();
     let s2 = buffer.trim();
 
@@ -48,7 +48,7 @@ fn handle_client(mut stream: TcpStream, password: &String, sysreq_fh: &mut File)
     if s1 == s2 {
         let _ = stream.write(b"Hello, world\n");
         let _ = stream.write(b"PUT A CHAR: ");       
-        let c = read_char(&stream);
+        let c = try!(read_char(&stream));
         if c.chars().all(char::is_uppercase) {
             do_sysreq(&mut stream, c.to_lowercase(), sysreq_fh);
         }
@@ -56,17 +56,17 @@ fn handle_client(mut stream: TcpStream, password: &String, sysreq_fh: &mut File)
     } else {
         let _ = stream.write(b"Wrong pass\n");
     }
-    
+    Ok(()) 
 }
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:8000").expect("Failed to bind");
 
-    let password = read_password().unwrap();
+    let password = read_password().expect("Can't read password");
     let mut sysreq_fh = OpenOptions::new()
                             .write(true)
                             .open("/proc/sysrq-trigger")
-                            .unwrap();
+                            .expect("Can't open /proc/sysrq-trigger");
 
     for stream in listener.incoming() {
         match stream {
