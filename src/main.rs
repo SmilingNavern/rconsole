@@ -13,23 +13,23 @@ fn read_password() -> Result<String,Error> {
     Ok(s)
 }
 
-fn read_char(stream: &TcpStream) -> Result<String,Error> {
+fn read_char(stream: &TcpStream) -> Result<char,Error> {
     let mut rstream = BufReader::new(try!(stream.try_clone()));
     let mut buffer = String::with_capacity(2);
     let _ = try!(rstream.read_line(&mut buffer));
-    Ok(buffer.trim().to_string())
+    Ok(buffer.trim().chars().nth(0).unwrap())
 }
 
-fn do_sysreq(stream: &mut TcpStream, key: String, sysreq_fh: &mut File) -> Result<(), Error> {
-    if !key.chars().all(char::is_alphabetic) {
+fn do_sysreq(stream: &mut TcpStream, key: char, sysreq_fh: &mut File) -> Result<(), Error> {
+    if !key.is_alphabetic() {
         let _ = stream.write(b"Key out of range\n");
         return Ok(()); 
     } 
 
     let _ = stream.write(format!("Send {} to sysreq? (y/n)\n", key).as_bytes());
     let answer = try!(read_char(&stream));
-    if answer.to_lowercase() == "y".to_string() {
-        sysreq_fh.write(key.as_bytes());
+    if answer.to_lowercase().next() == Some('y') {
+        try!(sysreq_fh.write_fmt(format_args!("{}", key)));
     }
 
     Ok(())
@@ -49,8 +49,8 @@ fn handle_client(mut stream: TcpStream, password: &String, sysreq_fh: &mut File)
         let _ = stream.write(b"Hello, world\n");
         let _ = stream.write(b"PUT A CHAR: ");       
         let c = try!(read_char(&stream));
-        if c.chars().all(char::is_uppercase) {
-            do_sysreq(&mut stream, c.to_lowercase(), sysreq_fh);
+        if c.is_uppercase() {
+            try!(do_sysreq(&mut stream, c, sysreq_fh));
         }
 
     } else {
@@ -71,7 +71,7 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                handle_client(stream, &password, &mut sysreq_fh);
+                let _ = handle_client(stream, &password, &mut sysreq_fh);
             }
             Err(e) => { 
                 print!("Connection failed: {}", e);
